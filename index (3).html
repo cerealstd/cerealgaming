@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Gato Online</title>
+<style>
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: #0f172a; color: #f1f5f9;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    min-height: 100vh;
+  }
+  .page {
+    min-height: 100vh; display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px; gap: 20px; text-align: center;
+  }
+  h1 { font-size: 2rem; margin: 0; }
+  .card {
+    background: #1e293b; border-radius: 16px; padding: 24px;
+    width: 100%; max-width: 380px; display: flex; flex-direction: column;
+    gap: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+  input {
+    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    padding: 12px; color: #f1f5f9; font-size: 1rem; text-align: center;
+    text-transform: uppercase; letter-spacing: 2px; width: 100%;
+  }
+  button {
+    background: #6366f1; border: none; border-radius: 8px; padding: 12px 16px;
+    color: white; font-size: 1rem; font-weight: 600; cursor: pointer;
+  }
+  button:hover:not(:disabled) { background: #4f46e5; }
+  button:disabled { background: #475569; cursor: not-allowed; }
+  button.secundario { background: transparent; border: 1px solid #475569; }
+  button.secundario:hover:not(:disabled) { background: #334155; }
+  .divisor { display: flex; align-items: center; gap: 12px; color: #64748b; font-size: 0.85rem; }
+  .divisor::before, .divisor::after { content: ""; flex: 1; height: 1px; background: #334155; }
+  .error { color: #f87171; font-size: 0.9rem; }
+  .codigo-sala {
+    font-size: 1.5rem; font-weight: 700; letter-spacing: 4px;
+    background: #0f172a; border-radius: 8px; padding: 8px 16px; border: 1px dashed #6366f1;
+  }
+  .tablero { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; max-width: 320px; }
+  .celda {
+    aspect-ratio: 1; background: #0f172a; border: 2px solid #334155; border-radius: 12px;
+    font-size: 2.5rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: #f1f5f9; padding: 0;
+  }
+  .celda:hover:not(:disabled) { border-color: #6366f1; }
+  .celda:disabled { cursor: default; }
+  .celda.x { color: #6366f1; }
+  .celda.o { color: #f59e0b; }
+  .estado { font-size: 1.1rem; min-height: 1.4rem; }
+  .marca-jugador { font-size: 0.9rem; color: #94a3b8; }
+  .compartir { display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; }
+</style>
+</head>
+<body>
+
+<div id="app"></div>
+
+<!-- Librería de Supabase, cargada directo desde internet, sin instalar nada -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+<script>
+// ======= CONFIGURACIÓN DE SUPABASE =======
+// El "anon key" está pensado para usarse directo en el navegador, es seguro.
+const SUPABASE_URL = "https://hdqumnjjihaasvpvegvp.supabase.co";
+const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImhkcXVtbmpqaWhhYXN2cHZlZ3ZwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkwNjk4MTcsImV4cCI6MjEwNDY0NTgxN30.a0rJq9Xp6LuI2T6VRu7xXPY-Ukj6YrDQSy8a4MhMQdg";
+
+const cliente = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+// ======= UTILIDADES DEL JUEGO =======
+const ALFABETO = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generarCodigoSala(longitud = 5) {
+  let codigo = "";
+  for (let i = 0; i < longitud; i++) {
+    codigo += ALFABETO[Math.floor(Math.random() * ALFABETO.length)];
+  }
+  return codigo;
+}
+
+function generarIdJugador() {
+  return "p_" + Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+}
+
+function tableroVacio() {
+  return ["", "", "", "", "", "", "", "", ""];
+}
+
+const LINEAS_GANADORAS = [
+  [0,1,2],[3,4,5],[6,7,8],
+  [0,3,6],[1,4,7],[2,5,8],
+  [0,4,8],[2,4,6],
+];
+
+function calcularGanador(board) {
+  for (const [a,b,c] of LINEAS_GANADORAS) {
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return board[a];
+  }
+  if (board.every((c) => c !== "")) return "empate";
+  return null;
+}
+
+// ======= ESTADO GLOBAL =======
+let canalActivo = null;
+const app = document.getElementById("app");
+
+// ======= VISTA: INICIO (crear / unirse) =======
+function mostrarInicio(mensajeError) {
+  if (canalActivo) { cliente.removeChannel(canalActivo); canalActivo = null; }
+
+  app.innerHTML = `
+    <main class="page">
+      <h1>⭕ Gato Online ❌</h1>
+      <div class="card">
+        <button id="btn-crear">Crear sala nueva</button>
+        <div class="divisor">o</div>
+        <form id="form-unirse" style="display:flex; flex-direction:column; gap:12px;">
+          <input id="input-codigo" placeholder="CÓDIGO" maxlength="8" />
+          <button type="submit" class="secundario">Unirse con código</button>
+        </form>
+        ${mensajeError ? `<p class="error">${mensajeError}</p>` : ""}
+      </div>
+    </main>
+  `;
+
+  document.getElementById("btn-crear").addEventListener("click", crearSala);
+  document.getElementById("form-unirse").addEventListener("submit", (e) => {
+    e.preventDefault();
+    const codigo = document.getElementById("input-codigo").value.trim().toUpperCase();
+    unirseSala(codigo);
+  });
+}
+
+async function crearSala() {
+  const codigo = generarCodigoSala();
+  const idJugador = generarIdJugador();
+
+  const { error } = await cliente.from("games").insert({
+    id: codigo,
+    board: tableroVacio(),
+    turn: "X",
+    player_x: idJugador,
+    player_o: null,
+    status: "esperando",
+    winner: null,
+  });
+
+  if (error) {
+    console.error(error);
+    mostrarInicio("No se pudo crear la sala. Intenta de nuevo.");
+    return;
+  }
+
+  localStorage.setItem(`gato:${codigo}:idJugador`, idJugador);
+  localStorage.setItem(`gato:${codigo}:rol`, "X");
+  history.pushState({}, "", `?sala=${codigo}`);
+  mostrarSala(codigo, idJugador, "X");
+}
+
+async function unirseSala(codigo) {
+  if (!codigo || codigo.length < 4) {
+    mostrarInicio("Ingresa un código válido.");
+    return;
+  }
+
+  const { data: sala, error } = await cliente
+    .from("games")
+    .select("*")
+    .eq("id", codigo)
+    .maybeSingle();
+
+  if (error) {
+    console.error(error);
+    mostrarInicio("Ocurrió un error al buscar la sala.");
+    return;
+  }
+
+  if (!sala) {
+    mostrarInicio("No existe una sala con ese código.");
+    return;
+  }
+
+  const idGuardado = localStorage.getItem(`gato:${codigo}:idJugador`);
+  if (idGuardado && (idGuardado === sala.player_x || idGuardado === sala.player_o)) {
+    const rolGuardado = localStorage.getItem(`gato:${codigo}:rol`);
+    history.pushState({}, "", `?sala=${codigo}`);
+    mostrarSala(codigo, idGuardado, rolGuardado);
+    return;
+  }
+
+  if (sala.status !== "esperando" || sala.player_o) {
+    mostrarInicio("Esa sala ya está llena o en juego.");
+    return;
+  }
+
+  const idJugador = generarIdJugador();
+  const { error: errorUpdate } = await cliente
+    .from("games")
+    .update({ player_o: idJugador, status: "jugando" })
+    .eq("id", codigo)
+    .eq("status", "esperando");
+
+  if (errorUpdate) {
+    console.error(errorUpdate);
+    mostrarInicio("Ocurrió un error al unirse a la sala.");
+    return;
+  }
+
+  localStorage.setItem(`gato:${codigo}:idJugador`, idJugador);
+  localStorage.setItem(`gato:${codigo}:rol`, "O");
+  history.pushState({}, "", `?sala=${codigo}`);
+  mostrarSala(codigo, idJugador, "O");
+}
+
+// ======= VISTA: SALA DE JUEGO =======
+async function mostrarSala(codigo, idJugador, rol) {
+  const { data: sala, error } = await cliente
+    .from("games")
+    .select("*")
+    .eq("id", codigo)
+    .maybeSingle();
+
+  if (error || !sala) {
+    mostrarInicio("Esta sala no existe.");
+    history.pushState({}, "", window.location.pathname);
+    return;
+  }
+
+  renderSala(sala, rol, codigo);
+
+  if (canalActivo) cliente.removeChannel(canalActivo);
+  canalActivo = cliente
+    .channel(`sala-${codigo}`)
+    .on(
+      "postgres_changes",
+      { event: "UPDATE", schema: "public", table: "games", filter: `id=eq.${codigo}` },
+      (payload) => renderSala(payload.new, rol, codigo)
+    )
+    .subscribe();
+}
+
+function renderSala(sala, rol, codigo) {
+  let mensajeEstado = "";
+  if (sala.status === "esperando") {
+    mensajeEstado = "Esperando a que se una el otro jugador…";
+  } else if (sala.status === "jugando") {
+    mensajeEstado = sala.turn === rol ? "Tu turno" : "Turno del rival";
+  } else if (sala.status === "terminado") {
+    if (sala.winner === "empate") mensajeEstado = "¡Empate!";
+    else if (sala.winner === rol) mensajeEstado = "¡Ganaste! 🎉";
+    else mensajeEstado = "Perdiste 😢";
+  }
+
+  app.innerHTML = `
+    <main class="page">
+      <h1>Gato Online</h1>
+      <div class="compartir">
+        <span class="codigo-sala">${codigo}</span>
+        <button class="secundario" id="btn-copiar">Copiar código</button>
+      </div>
+      <p class="marca-jugador">Juegas como: ${rol}</p>
+      <p class="estado">${mensajeEstado}</p>
+      <div class="tablero">
+        ${sala.board.map((celda, i) => `
+          <button
+            class="celda ${celda === "X" ? "x" : celda === "O" ? "o" : ""}"
+            data-indice="${i}"
+            ${(sala.status !== "jugando" || sala.turn !== rol || celda !== "") ? "disabled" : ""}
+          >${celda}</button>
+        `).join("")}
+      </div>
+      ${sala.status === "terminado" ? `<button id="btn-reiniciar">Jugar otra vez</button>` : ""}
+      <button class="secundario" id="btn-salir">Salir</button>
+    </main>
+  `;
+
+  document.getElementById("btn-copiar").addEventListener("click", () => {
+    navigator.clipboard.writeText(codigo);
+  });
+
+  document.getElementById("btn-salir").addEventListener("click", () => {
+    history.pushState({}, "", window.location.pathname);
+    mostrarInicio();
+  });
+
+  const btnReiniciar = document.getElementById("btn-reiniciar");
+  if (btnReiniciar) {
+    btnReiniciar.addEventListener("click", async () => {
+      await cliente.from("games").update({
+        board: tableroVacio(), turn: "X", status: "jugando", winner: null,
+      }).eq("id", codigo);
+    });
+  }
+
+  document.querySelectorAll(".celda").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const indice = parseInt(btn.dataset.indice, 10);
+      const nuevoTablero = [...sala.board];
+      nuevoTablero[indice] = rol;
+      const ganador = calcularGanador(nuevoTablero);
+
+      await cliente.from("games").update({
+        board: nuevoTablero,
+        turn: rol === "X" ? "O" : "X",
+        status: ganador ? "terminado" : "jugando",
+        winner: ganador,
+      }).eq("id", codigo);
+    });
+  });
+}
+
+// ======= ARRANQUE =======
+(function iniciar() {
+  const params = new URLSearchParams(window.location.search);
+  const codigoEnUrl = params.get("sala");
+
+  if (codigoEnUrl) {
+    const codigo = codigoEnUrl.toUpperCase();
+    const idGuardado = localStorage.getItem(`gato:${codigo}:idJugador`);
+    const rolGuardado = localStorage.getItem(`gato:${codigo}:rol`);
+    if (idGuardado && rolGuardado) {
+      mostrarSala(codigo, idGuardado, rolGuardado);
+      return;
+    }
+  }
+  mostrarInicio();
+})();
+</script>
+
+</body>
+</html>
