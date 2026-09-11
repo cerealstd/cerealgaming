@@ -129,6 +129,12 @@
   .insignia.perdiste { background: #EADFCB; }
   .marca-jugador { font-size: 0.85rem; color: var(--tinta-suave); }
   .marca-jugador b { color: var(--tinta); font-family: 'Baloo 2', sans-serif; }
+  .creditos {
+    font-size: 0.75rem;
+    color: var(--tinta-suave);
+    letter-spacing: 0.5px;
+    margin: 0;
+  }
   .compartir { display: flex; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap; }
 </style>
 </head>
@@ -190,6 +196,7 @@ function mostrarInicio(mensajeError) {
 
   app.innerHTML = `
     <main class="page">
+      <p class="creditos">Creado por @jimenaesunapollita</p>
       <div>
         <h1 class="titulo">Gato</h1>
         <p class="subtitulo">Partida online · 1 contra 1</p>
@@ -338,6 +345,7 @@ function renderSala(sala, rol, codigo) {
 
   app.innerHTML = `
     <main class="page">
+      <p class="creditos">Creado por @jimenaesunapollita</p>
       <h1 class="titulo">Gato</h1>
       <div class="compartir">
         <span class="codigo-sala">${codigo}</span>
