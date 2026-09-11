@@ -4,12 +4,25 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Gato Online</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
+  :root {
+    --papel: #FBF6EC;
+    --papel-marcado: #F1E9D8;
+    --tinta: #2C2620;
+    --tinta-suave: #6B6155;
+    --x-color: #4C3B8C;
+    --o-color: #D9822B;
+    --turno: #2F8F6E;
+    --error: #B4472F;
+  }
   * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0;
-    background: #0f172a; color: #f1f5f9;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--papel); color: var(--tinta);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     min-height: 100vh;
   }
   .page {
@@ -17,45 +30,106 @@
     align-items: center; justify-content: center;
     padding: 24px; gap: 20px; text-align: center;
   }
-  h1 { font-size: 2rem; margin: 0; }
+  .titulo {
+    position: relative;
+    display: inline-block;
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: 2.4rem;
+    margin: 0 0 4px 0;
+    color: var(--tinta);
+    letter-spacing: 0.5px;
+  }
+  .titulo::before, .titulo::after {
+    content: "";
+    position: absolute;
+    top: -14px;
+    width: 0; height: 0;
+    border-left: 11px solid transparent;
+    border-right: 11px solid transparent;
+    border-bottom: 20px solid var(--tinta);
+  }
+  .titulo::before { left: -6px; transform: rotate(-18deg); }
+  .titulo::after { right: -6px; transform: rotate(18deg); }
+  .subtitulo {
+    font-family: 'Inter', sans-serif;
+    font-size: 0.85rem;
+    color: var(--tinta-suave);
+    text-transform: uppercase;
+    letter-spacing: 3px;
+    margin: 0 0 8px 0;
+  }
   .card {
-    background: #1e293b; border-radius: 16px; padding: 24px;
+    background: var(--papel-marcado);
+    border: 2px solid var(--tinta);
+    border-radius: 20px; padding: 28px;
     width: 100%; max-width: 380px; display: flex; flex-direction: column;
-    gap: 16px; box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    gap: 16px;
+    box-shadow: 4px 4px 0 var(--tinta);
   }
   input {
-    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
-    padding: 12px; color: #f1f5f9; font-size: 1rem; text-align: center;
-    text-transform: uppercase; letter-spacing: 2px; width: 100%;
+    background: var(--papel); border: 2px solid var(--tinta); border-radius: 10px;
+    padding: 12px; color: var(--tinta); font-size: 1.1rem; text-align: center;
+    text-transform: uppercase; letter-spacing: 3px; width: 100%;
+    font-family: 'Baloo 2', sans-serif; font-weight: 700;
   }
+  input::placeholder { color: var(--tinta-suave); letter-spacing: 2px; }
+  input:focus { outline: 3px solid var(--turno); outline-offset: 1px; }
   button {
-    background: #6366f1; border: none; border-radius: 8px; padding: 12px 16px;
-    color: white; font-size: 1rem; font-weight: 600; cursor: pointer;
+    background: var(--x-color); border: 2px solid var(--tinta); border-radius: 999px;
+    padding: 13px 18px;
+    color: var(--papel); font-size: 1rem; font-family: 'Inter', sans-serif; font-weight: 700;
+    cursor: pointer;
+    box-shadow: 3px 3px 0 var(--tinta);
+    transition: transform 0.1s ease, box-shadow 0.1s ease;
   }
-  button:hover:not(:disabled) { background: #4f46e5; }
-  button:disabled { background: #475569; cursor: not-allowed; }
-  button.secundario { background: transparent; border: 1px solid #475569; }
-  button.secundario:hover:not(:disabled) { background: #334155; }
-  .divisor { display: flex; align-items: center; gap: 12px; color: #64748b; font-size: 0.85rem; }
-  .divisor::before, .divisor::after { content: ""; flex: 1; height: 1px; background: #334155; }
-  .error { color: #f87171; font-size: 0.9rem; }
+  button:hover:not(:disabled) { transform: translate(1px, 1px); box-shadow: 2px 2px 0 var(--tinta); }
+  button:active:not(:disabled) { transform: translate(3px, 3px); box-shadow: 0 0 0 var(--tinta); }
+  button:disabled { background: #D8D0C0; color: var(--tinta-suave); border-color: #D8D0C0; box-shadow: none; cursor: not-allowed; }
+  button.secundario { background: var(--papel); color: var(--tinta); }
+  button:focus-visible { outline: 3px solid var(--turno); outline-offset: 2px; }
+  .divisor { display: flex; align-items: center; gap: 12px; color: var(--tinta-suave); font-size: 0.8rem; letter-spacing: 1px; }
+  .divisor::before, .divisor::after { content: ""; flex: 1; height: 2px; background: var(--tinta-suave); opacity: 0.35; }
+  .error {
+    color: var(--error); font-size: 0.9rem; font-weight: 600;
+    background: #F4E3DD; border: 1px solid var(--error); border-radius: 10px; padding: 8px 12px;
+  }
   .codigo-sala {
-    font-size: 1.5rem; font-weight: 700; letter-spacing: 4px;
-    background: #0f172a; border-radius: 8px; padding: 8px 16px; border: 1px dashed #6366f1;
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 1.7rem; font-weight: 700; letter-spacing: 6px;
+    background: var(--papel); border-radius: 10px; padding: 8px 18px;
+    border: 2px dashed var(--tinta);
   }
-  .tablero { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; max-width: 320px; }
+  .tablero {
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px;
+    width: 100%; max-width: 300px;
+    background: var(--tinta); padding: 6px; border-radius: 16px;
+    border: 2px solid var(--tinta);
+  }
   .celda {
-    aspect-ratio: 1; background: #0f172a; border: 2px solid #334155; border-radius: 12px;
-    font-size: 2.5rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
-    cursor: pointer; color: #f1f5f9; padding: 0;
+    aspect-ratio: 1; background: var(--papel); border: none; border-radius: 10px;
+    font-family: 'Baloo 2', sans-serif;
+    font-size: 2.6rem; font-weight: 700; display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--tinta); padding: 0;
+    box-shadow: none;
   }
-  .celda:hover:not(:disabled) { border-color: #6366f1; }
+  .celda:hover:not(:disabled) { background: #FFFDF7; transform: none; }
   .celda:disabled { cursor: default; }
-  .celda.x { color: #6366f1; }
-  .celda.o { color: #f59e0b; }
-  .estado { font-size: 1.1rem; min-height: 1.4rem; }
-  .marca-jugador { font-size: 0.9rem; color: #94a3b8; }
-  .compartir { display: flex; align-items: center; gap: 8px; justify-content: center; flex-wrap: wrap; }
+  .celda.x { color: var(--x-color); }
+  .celda.o { color: var(--o-color); }
+  .insignia {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-weight: 700; font-size: 0.95rem;
+    padding: 8px 16px; border-radius: 999px;
+    border: 2px solid var(--tinta);
+    background: var(--papel-marcado);
+  }
+  .insignia.turno-propio { background: var(--turno); color: var(--papel); border-color: var(--turno); }
+  .insignia.ganaste { background: var(--turno); color: var(--papel); border-color: var(--turno); }
+  .insignia.perdiste { background: #EADFCB; }
+  .marca-jugador { font-size: 0.85rem; color: var(--tinta-suave); }
+  .marca-jugador b { color: var(--tinta); font-family: 'Baloo 2', sans-serif; }
+  .compartir { display: flex; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap; }
 </style>
 </head>
 <body>
@@ -116,12 +190,15 @@ function mostrarInicio(mensajeError) {
 
   app.innerHTML = `
     <main class="page">
-      <h1>⭕ Gato Online ❌</h1>
+      <div>
+        <h1 class="titulo">Gato</h1>
+        <p class="subtitulo">Partida online · 1 contra 1</p>
+      </div>
       <div class="card">
         <button id="btn-crear">Crear sala nueva</button>
-        <div class="divisor">o</div>
+        <div class="divisor">o si ya tienes un código</div>
         <form id="form-unirse" style="display:flex; flex-direction:column; gap:12px;">
-          <input id="input-codigo" placeholder="CÓDIGO" maxlength="8" />
+          <input id="input-codigo" placeholder="Código de sala" maxlength="8" />
           <button type="submit" class="secundario">Unirse con código</button>
         </form>
         ${mensajeError ? `<p class="error">${mensajeError}</p>` : ""}
@@ -247,25 +324,27 @@ async function mostrarSala(codigo, idJugador, rol) {
 
 function renderSala(sala, rol, codigo) {
   let mensajeEstado = "";
+  let claseInsignia = "";
   if (sala.status === "esperando") {
-    mensajeEstado = "Esperando a que se una el otro jugador…";
+    mensajeEstado = "Esperando al otro jugador…";
   } else if (sala.status === "jugando") {
     mensajeEstado = sala.turn === rol ? "Tu turno" : "Turno del rival";
+    claseInsignia = sala.turn === rol ? "turno-propio" : "";
   } else if (sala.status === "terminado") {
-    if (sala.winner === "empate") mensajeEstado = "¡Empate!";
-    else if (sala.winner === rol) mensajeEstado = "¡Ganaste! 🎉";
-    else mensajeEstado = "Perdiste 😢";
+    if (sala.winner === "empate") { mensajeEstado = "¡Empate!"; }
+    else if (sala.winner === rol) { mensajeEstado = "¡Ganaste!"; claseInsignia = "ganaste"; }
+    else { mensajeEstado = "Perdiste"; claseInsignia = "perdiste"; }
   }
 
   app.innerHTML = `
     <main class="page">
-      <h1>Gato Online</h1>
+      <h1 class="titulo">Gato</h1>
       <div class="compartir">
         <span class="codigo-sala">${codigo}</span>
         <button class="secundario" id="btn-copiar">Copiar código</button>
       </div>
-      <p class="marca-jugador">Juegas como: ${rol}</p>
-      <p class="estado">${mensajeEstado}</p>
+      <p class="marca-jugador">Juegas como <b>${rol}</b></p>
+      <span class="insignia ${claseInsignia}">${mensajeEstado}</span>
       <div class="tablero">
         ${sala.board.map((celda, i) => `
           <button
