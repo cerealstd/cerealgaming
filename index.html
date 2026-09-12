@@ -136,6 +136,28 @@
     margin: 0;
   }
   .compartir { display: flex; align-items: center; gap: 10px; justify-content: center; flex-wrap: wrap; }
+
+  .celda.ganadora {
+    background: var(--turno) !important;
+    color: var(--papel) !important;
+    animation: pulsoGanador 0.55s ease-in-out 3;
+  }
+  @keyframes pulsoGanador {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.08); }
+  }
+
+  .confeti-contenedor {
+    position: fixed; inset: 0; pointer-events: none; z-index: 999; overflow: hidden;
+  }
+  .confeti {
+    position: absolute; top: -12px; width: 9px; height: 14px; border-radius: 2px;
+    animation-name: caerConfeti; animation-timing-function: ease-in; animation-fill-mode: forwards;
+  }
+  @keyframes caerConfeti {
+    0% { transform: translateY(-10vh) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(110vh) rotate(520deg); opacity: 0.85; }
+  }
 </style>
 </head>
 <body>
@@ -190,8 +212,35 @@ function calcularGanador(board) {
   return null;
 }
 
+function obtenerLineaGanadora(board) {
+  for (const linea of LINEAS_GANADORAS) {
+    const [a, b, c] = linea;
+    if (board[a] && board[a] === board[b] && board[a] === board[c]) return linea;
+  }
+  return null;
+}
+
+function lanzarConfeti() {
+  const colores = ["#4C3B8C", "#D9822B", "#2F8F6E", "#2C2620"];
+  const contenedor = document.createElement("div");
+  contenedor.className = "confeti-contenedor";
+  for (let i = 0; i < 28; i++) {
+    const pieza = document.createElement("span");
+    pieza.className = "confeti";
+    pieza.style.left = Math.random() * 100 + "vw";
+    pieza.style.background = colores[Math.floor(Math.random() * colores.length)];
+    pieza.style.animationDuration = 1.8 + Math.random() * 1.4 + "s";
+    pieza.style.animationDelay = Math.random() * 0.3 + "s";
+    pieza.style.transform = `rotate(${Math.random() * 360}deg)`;
+    contenedor.appendChild(pieza);
+  }
+  document.body.appendChild(contenedor);
+  setTimeout(() => contenedor.remove(), 3500);
+}
+
 // ======= ESTADO GLOBAL =======
 let canalActivo = null;
+let ultimaSalaConfeti = null;
 const app = document.getElementById("app");
 
 // ======= VISTA: INICIO (crear / unirse) =======
@@ -347,6 +396,18 @@ function renderSala(sala, rol, codigo) {
     else { mensajeEstado = "Perdiste"; claseInsignia = "perdiste"; }
   }
 
+  const lineaGanadora = (sala.status === "terminado" && sala.winner !== "empate")
+    ? obtenerLineaGanadora(sala.board)
+    : null;
+
+  if (sala.status === "terminado" && sala.winner === rol && codigo !== ultimaSalaConfeti) {
+    lanzarConfeti();
+    ultimaSalaConfeti = codigo + ":" + JSON.stringify(sala.board);
+  }
+  if (sala.status !== "terminado") {
+    ultimaSalaConfeti = null;
+  }
+
   app.innerHTML = `
     <main class="page">
       <p class="creditos">Creado por @jimenaesunapollita</p>
@@ -360,7 +421,7 @@ function renderSala(sala, rol, codigo) {
       <div class="tablero">
         ${sala.board.map((celda, i) => `
           <button
-            class="celda ${celda === "X" ? "x" : celda === "O" ? "o" : ""}"
+            class="celda ${celda === "X" ? "x" : celda === "O" ? "o" : ""} ${lineaGanadora && lineaGanadora.includes(i) ? "ganadora" : ""}"
             data-indice="${i}"
             ${(sala.status !== "jugando" || sala.turn !== rol || celda !== "") ? "disabled" : ""}
           >${celda}</button>
