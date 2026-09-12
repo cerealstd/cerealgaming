@@ -172,6 +172,10 @@ function tableroVacio() {
   return ["", "", "", "", "", "", "", "", ""];
 }
 
+function elegirTurnoAleatorio() {
+  return Math.random() < 0.5 ? "X" : "O";
+}
+
 const LINEAS_GANADORAS = [
   [0,1,2],[3,4,5],[6,7,8],
   [0,3,6],[1,4,7],[2,5,8],
@@ -228,7 +232,7 @@ async function crearSala() {
   const { error } = await cliente.from("games").insert({
     id: codigo,
     board: tableroVacio(),
-    turn: "X",
+    turn: elegirTurnoAleatorio(),
     player_x: idJugador,
     player_o: null,
     status: "esperando",
@@ -380,7 +384,7 @@ function renderSala(sala, rol, codigo) {
   if (btnReiniciar) {
     btnReiniciar.addEventListener("click", async () => {
       await cliente.from("games").update({
-        board: tableroVacio(), turn: "X", status: "jugando", winner: null,
+        board: tableroVacio(), turn: elegirTurnoAleatorio(), status: "jugando", winner: null,
       }).eq("id", codigo);
     });
   }
