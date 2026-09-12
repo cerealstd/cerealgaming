@@ -241,7 +241,6 @@ function lanzarConfeti() {
 // ======= ESTADO GLOBAL =======
 let canalActivo = null;
 let ultimaSalaConfeti = null;
-let reiniciandoEnCurso = false;
 const app = document.getElementById("app");
 
 // ======= VISTA: INICIO (crear / unirse) =======
@@ -400,28 +399,14 @@ function renderSala(sala, rol, codigo) {
   const propiaRevancha = rol === "X" ? sala.revancha_x : sala.revancha_o;
   const rivalRevancha = rol === "X" ? sala.revancha_o : sala.revancha_x;
 
-  if (sala.status === "terminado" && sala.revancha_x && sala.revancha_o && !reiniciandoEnCurso) {
-    reiniciandoEnCurso = true;
-    cliente.from("games").update({
-      board: tableroVacio(),
-      turn: elegirTurnoAleatorio(),
-      status: "jugando",
-      winner: null,
-      revancha_x: false,
-      revancha_o: false,
-    }).eq("id", codigo);
-  }
-  if (sala.status !== "terminado") {
-    reiniciandoEnCurso = false;
-  }
-
   const lineaGanadora = (sala.status === "terminado" && sala.winner !== "empate")
     ? obtenerLineaGanadora(sala.board)
     : null;
 
-  if (sala.status === "terminado" && sala.winner === rol && codigo !== ultimaSalaConfeti) {
+  const marcaPartidaActual = codigo + ":" + JSON.stringify(sala.board);
+  if (sala.status === "terminado" && sala.winner === rol && marcaPartidaActual !== ultimaSalaConfeti) {
     lanzarConfeti();
-    ultimaSalaConfeti = codigo + ":" + JSON.stringify(sala.board);
+    ultimaSalaConfeti = marcaPartidaActual;
   }
   if (sala.status !== "terminado") {
     ultimaSalaConfeti = null;
@@ -467,8 +452,33 @@ function renderSala(sala, rol, codigo) {
   const btnReiniciar = document.getElementById("btn-reiniciar");
   if (btnReiniciar) {
     btnReiniciar.addEventListener("click", async () => {
-      const campo = rol === "X" ? "revancha_x" : "revancha_o";
-      await cliente.from("games").update({ [campo]: true }).eq("id", codigo);
+      const { data: filaActual, error: errorLectura } = await cliente
+        .from("games")
+        .select("revancha_x, revancha_o")
+        .eq("id", codigo)
+        .maybeSingle();
+
+      if (errorLectura || !filaActual) {
+        console.error(errorLectura);
+        return;
+      }
+
+      const rivalYaAcepto = rol === "X" ? filaActual.revancha_o : filaActual.revancha_x;
+
+      if (rivalYaAcepto) {
+        // El rival ya había aceptado: reiniciamos la partida de una vez.
+        await cliente.from("games").update({
+          board: tableroVacio(),
+          turn: elegirTurnoAleatorio(),
+          status: "jugando",
+          winner: null,
+          revancha_x: false,
+          revancha_o: false,
+        }).eq("id", codigo);
+      } else {
+        const campo = rol === "X" ? "revancha_x" : "revancha_o";
+        await cliente.from("games").update({ [campo]: true }).eq("id", codigo);
+      }
     });
   }
 
