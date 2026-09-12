@@ -241,6 +241,7 @@ function lanzarConfeti() {
 // ======= ESTADO GLOBAL =======
 let canalActivo = null;
 let ultimaSalaConfeti = null;
+let reiniciandoEnCurso = false;
 const app = document.getElementById("app");
 
 // ======= VISTA: INICIO (crear / unirse) =======
@@ -396,6 +397,24 @@ function renderSala(sala, rol, codigo) {
     else { mensajeEstado = "Perdiste"; claseInsignia = "perdiste"; }
   }
 
+  const propiaRevancha = rol === "X" ? sala.revancha_x : sala.revancha_o;
+  const rivalRevancha = rol === "X" ? sala.revancha_o : sala.revancha_x;
+
+  if (sala.status === "terminado" && sala.revancha_x && sala.revancha_o && !reiniciandoEnCurso) {
+    reiniciandoEnCurso = true;
+    cliente.from("games").update({
+      board: tableroVacio(),
+      turn: elegirTurnoAleatorio(),
+      status: "jugando",
+      winner: null,
+      revancha_x: false,
+      revancha_o: false,
+    }).eq("id", codigo);
+  }
+  if (sala.status !== "terminado") {
+    reiniciandoEnCurso = false;
+  }
+
   const lineaGanadora = (sala.status === "terminado" && sala.winner !== "empate")
     ? obtenerLineaGanadora(sala.board)
     : null;
@@ -427,7 +446,11 @@ function renderSala(sala, rol, codigo) {
           >${celda}</button>
         `).join("")}
       </div>
-      ${sala.status === "terminado" ? `<button id="btn-reiniciar">Jugar otra vez</button>` : ""}
+      ${sala.status === "terminado" ? (
+        propiaRevancha
+          ? `<p class="marca-jugador">Esperando a que tu rival también quiera jugar otra vez…</p>`
+          : `${rivalRevancha ? `<p class="marca-jugador">Tu rival ya quiere jugar otra vez</p>` : ""}<button id="btn-reiniciar">Jugar otra vez</button>`
+      ) : ""}
       <button class="secundario" id="btn-salir">Salir</button>
     </main>
   `;
@@ -444,9 +467,8 @@ function renderSala(sala, rol, codigo) {
   const btnReiniciar = document.getElementById("btn-reiniciar");
   if (btnReiniciar) {
     btnReiniciar.addEventListener("click", async () => {
-      await cliente.from("games").update({
-        board: tableroVacio(), turn: elegirTurnoAleatorio(), status: "jugando", winner: null,
-      }).eq("id", codigo);
+      const campo = rol === "X" ? "revancha_x" : "revancha_o";
+      await cliente.from("games").update({ [campo]: true }).eq("id", codigo);
     });
   }
 
